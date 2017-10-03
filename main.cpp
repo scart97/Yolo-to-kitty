@@ -2,6 +2,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <algorithm>
 
 // Required by yolo
 #define OPENCV
@@ -48,7 +49,7 @@ void draw_boxes(cv::Mat mat_img, std::vector<bbox_t> detection_vec, std::vector<
 }
 
 
-std::vector<std::string> objects_names_from_file(std::string const filename) {
+std::vector<std::string> objects_names_from_file(const std::string &filename) {
 	std::ifstream file(filename);
 	std::vector<std::string> file_lines;
 	if (!file.is_open()) 
@@ -60,7 +61,9 @@ std::vector<std::string> objects_names_from_file(std::string const filename) {
 }
 
 void
-save_detections_to_kitti(const std::vector<bbox_t> &detections, std::vector<std::string> obj_names, const std::string &image_name)
+save_detections_to_kitti(const std::vector<bbox_t> &detections, std::vector<std::string> obj_names, 
+							const std::string &image_name, 
+							const std::vector<std::string> &obj_name_filter)
 {
 	//this substr separates the string between the / and the extension
 	//for example Images/dog.jpg becomes dog
@@ -76,7 +79,7 @@ save_detections_to_kitti(const std::vector<bbox_t> &detections, std::vector<std:
 	{
 		std::string name = obj_names.at(object.obj_id);
 
-		if(!(name == "car" || name == "person" || name == "motorcycle"))
+		if(std::find(obj_name_filter.begin(), obj_name_filter.end(), name) == obj_name_filter.end())
 			name = "other";
 	
 		file << name << " -1 -1 -10 " << object.x << " " << object.y << " " << object.x + object.w << " " << object.y + object.h << " -1 -1 -1 -1000 -1000 -1000 -10\n";
@@ -84,6 +87,26 @@ save_detections_to_kitti(const std::vector<bbox_t> &detections, std::vector<std:
 
 
 	file.close();
+
+}
+
+
+void
+add_desired_classes(std::vector<std::string> &vec)
+{
+
+	vec.emplace_back("person");
+	vec.emplace_back("bicycle");
+	vec.emplace_back("car");
+	vec.emplace_back("motorbike");
+	vec.emplace_back("aeroplane");
+	vec.emplace_back("bus");
+	vec.emplace_back("train");
+	vec.emplace_back("truck");
+	vec.emplace_back("traffic light");
+	vec.emplace_back("stop sign");
+	vec.emplace_back("cat");
+	vec.emplace_back("dog");
 
 }
 
@@ -102,6 +125,9 @@ int main(int argc, char *argv[])
 	/**** Initialize network ****/
 	Detector detector(cfg_filename, weight_filename);
 
+	std::vector<std::string> obj_name_filter;
+	add_desired_classes(obj_name_filter);
+
 	std::ifstream file(filename);
 	if (!file.is_open()) 
 		std::cout << "File not found! \n";
@@ -113,11 +139,11 @@ int main(int argc, char *argv[])
 			std::vector<bbox_t> result_vec = detector.detect(mat_img);
 			
 			std::cout << "Number of detections: " << result_vec.size() << std::endl;
-			
-			// uncomment this line to show detections 
-			//draw_boxes(mat_img, result_vec, obj_names);
 
-			save_detections_to_kitti(result_vec, obj_names, line);
+/**************UNCOMMENT THE FOLLOWING LINE TO SHOW DETECTIONS******************/
+            //draw_boxes(mat_img, result_vec, obj_names);
+
+			save_detections_to_kitti(result_vec, obj_names, line, obj_name_filter);
 
 		}
 
