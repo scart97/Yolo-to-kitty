@@ -1,9 +1,11 @@
 import os
 
 file = open("imagelist.txt", "w")
-filenames = os.listdir("Images")
+filenames = os.listdir("images")
 
 for name in filenames:
-	file.write("Images/" + name + "\n")
+	if not name == ".keep":
+		file.write("images/" + name + "\n")
+		
 
 file.close()
